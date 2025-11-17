@@ -4,7 +4,7 @@ import { Root } from "./routes/root.tsx";
 import { NotFound } from "@/app/routes/not-found.tsx";
 import { Home } from "@/app/routes/home.tsx";
 
-export const createAppRouter = () =>
+const createAppRouter = () =>
   createBrowserRouter([
     {
       path: paths.root.root.path,

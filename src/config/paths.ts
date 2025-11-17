@@ -8,5 +8,9 @@ export const paths = {
       path: "",
       getHref: () => "/",
     },
+    login: {
+      path: "login",
+      getHref: () => "/login",
+    },
   },
 };

@@ -19,7 +19,7 @@ export const Home = () => {
             <ResizableHandle withHandle />
             <ResizablePanel>
               {/* TODO limit panel size */}
-              <PasswordForm />
+              <PasswordForm id={null} />
             </ResizablePanel>
           </ResizablePanelGroup>
         </TabsContent>

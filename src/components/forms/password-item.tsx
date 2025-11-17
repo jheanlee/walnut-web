@@ -19,19 +19,27 @@ import {
 } from "@/components/ui/input-group.tsx";
 import { CopyCheck, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
+import { passwordSchema } from "@/services/form-schemas/password-item.ts";
 
-const passwordSchema = z.object({
-  name: z.string().normalize().min(1).max(256),
-  email: z.email().optional(),
-  username: z.string().normalize().max(1024),
-  password: z.string().normalize().max(1024),
-  websites: z.array(z.string().normalize().max(2048)).max(256),
-  notes: z.string().normalize().max(2048),
-});
+interface PasswordItemProps {
+  id: string | null;
+}
 
-export const PasswordForm = () => {
+export const PasswordForm = ({ id }: PasswordItemProps) => {
+  const [originalValues, setOriginalValues] = useState<
+    z.infer<typeof passwordSchema>
+  >({
+    name: "",
+    email: undefined,
+    username: "",
+    password: "",
+    websites: [],
+    notes: "",
+  });
   const [usernameCopied, setUsernameCopied] = useState<boolean>(false);
   const [passwordCopied, setPasswordCopied] = useState<boolean>(false);
+
+  useEffect(() => {}, []);
 
   useEffect(() => {
     if (usernameCopied) {
@@ -54,14 +62,7 @@ export const PasswordForm = () => {
 
   const form = useForm<z.infer<typeof passwordSchema>>({
     resolver: zodResolver(passwordSchema),
-    defaultValues: {
-      name: "",
-      email: undefined,
-      username: "",
-      password: "",
-      websites: [],
-      notes: "",
-    },
+    defaultValues: originalValues,
   });
 
   const onSubmit = async (values: z.infer<typeof passwordSchema>) => {
@@ -195,7 +196,7 @@ export const PasswordForm = () => {
                   <FieldLabel>Website(s)</FieldLabel>
                   <FieldContent>
                     <Input
-                      type="text"
+                      type="url"
                       placeholder="example.com"
                       aria-invalid={fieldState.invalid}
                       {...field}
