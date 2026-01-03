@@ -15,6 +15,7 @@ export const newPasswordItem = async (data: z.infer<typeof passwordSchema>) => {
       username: data.username,
       email: data.email ?? "",
       encrypted_password: await encryptItem({
+        //  TODO use web worker to avoid blocking main thread
         masterKey: masterKey ?? "",
         itemPlaintext: data.password,
       }),
@@ -32,7 +33,7 @@ export const newPasswordItem = async (data: z.infer<typeof passwordSchema>) => {
 
 export const updatePasswordItem = async (
   data: z.infer<typeof passwordSchema>,
-  item_id: string,
+  item_id: number,
 ) => {
   try {
     await fetcher.put(
@@ -43,6 +44,7 @@ export const updatePasswordItem = async (
         username: data.username,
         email: data.email,
         encrypted_password: await encryptItem({
+          //  TODO use web worker to avoid blocking main thread
           masterKey: masterKey ?? "",
           itemPlaintext: data.password,
         }),
@@ -67,7 +69,7 @@ export interface PasswordItem {
   website: string[];
   notes: string;
 }
-export const getPasswordItem = async (item_id: string) => {
+export const getPasswordItem = async (item_id: number) => {
   try {
     const res = await fetcher.get<{
       name: string;
@@ -99,6 +101,7 @@ export const getPasswordItem = async (item_id: string) => {
 };
 
 export interface PasswordListItem {
+  id: number;
   name: string;
   username: string;
   email: string;
@@ -110,6 +113,7 @@ export const getPasswordItems = async () => {
   try {
     const res = await fetcher.get<{
       passwords: {
+        id: number;
         name: string;
         username: string;
         email: string;
@@ -119,6 +123,7 @@ export const getPasswordItems = async () => {
     }>(`/api/${AuthManager.userId ?? ""}/items`);
 
     const passwords: {
+      id: number;
       name: string;
       username: string;
       email: string;
@@ -128,6 +133,7 @@ export const getPasswordItems = async () => {
 
     for (const item of res.data.passwords) {
       passwords.push({
+        id: item.id,
         name: item.name,
         username: item.username,
         email: item.email,

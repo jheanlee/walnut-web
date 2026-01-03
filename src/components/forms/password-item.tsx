@@ -17,7 +17,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group.tsx";
-import { CopyCheck, Copy, PlusIcon } from "lucide-react";
+import { CopyCheck, Copy, PlusIcon, EyeOff, Eye } from "lucide-react";
 import { useEffect, useState } from "react";
 import { passwordSchema } from "@/services/form-schemas/password-item.ts";
 import {
@@ -28,9 +28,10 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner.tsx";
+import { ScrollArea } from "@/components/ui/scroll-area.tsx";
 
 interface PasswordItemProps {
-  id: string | null;
+  id: number | null;
 }
 
 export const PasswordForm = ({ id }: PasswordItemProps) => {
@@ -46,14 +47,25 @@ export const PasswordForm = ({ id }: PasswordItemProps) => {
   });
   const [usernameCopied, setUsernameCopied] = useState<boolean>(false);
   const [passwordCopied, setPasswordCopied] = useState<boolean>(false);
+  const [passwordHidden, setPasswordHidden] = useState<boolean>(true);
   const [processState, setProcessState] = useState<boolean>(false);
+
+  const form = useForm<z.infer<typeof passwordSchema>>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: originalValues,
+  });
 
   useEffect(() => {
     if (id !== null) {
+      setUsernameCopied(false);
+      setPasswordCopied(false);
+      setPasswordHidden(true);
+      setProcessState(false);
       const fetchPassword = async () => {
         const res = await getPasswordItem(id);
         if (typeof res !== "number") {
           setOriginalValues(res);
+          form.reset(res);
         } else {
           toast.error(() => {
             switch (res) {
@@ -74,7 +86,7 @@ export const PasswordForm = ({ id }: PasswordItemProps) => {
 
       void (async () => await fetchPassword())();
     }
-  }, []);
+  }, [id]);
 
   useEffect(() => {
     if (usernameCopied) {
@@ -94,11 +106,6 @@ export const PasswordForm = ({ id }: PasswordItemProps) => {
       return () => clearTimeout(timer);
     }
   }, [passwordCopied]);
-
-  const form = useForm<z.infer<typeof passwordSchema>>({
-    resolver: zodResolver(passwordSchema),
-    defaultValues: originalValues,
-  });
 
   const onSubmit = async (values: z.infer<typeof passwordSchema>) => {
     setProcessState(true);
@@ -125,7 +132,7 @@ export const PasswordForm = ({ id }: PasswordItemProps) => {
     } else {
       const res = await updatePasswordItem(values, id);
       if (res === 200) {
-        // toast.success("Password item edited");
+        toast.success("Password item edited");
       } else {
         toast.error(() => {
           switch (res) {
@@ -147,196 +154,210 @@ export const PasswordForm = ({ id }: PasswordItemProps) => {
   };
 
   return (
-    <div className="w-full h-full">
-      <form
-        onSubmit={form.handleSubmit(async (form) => {
-          setProcessState(true);
-          await onSubmit(form);
-        })}
-      >
-        <FieldSet>
-          <FieldGroup>
-            <Controller
-              name="name"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field>
-                  <FieldLabel>Item Name</FieldLabel>
-                  <FieldContent>
-                    <Input
-                      type="text"
-                      placeholder="Item Name"
-                      aria-invalid={fieldState.invalid}
-                      {...field}
-                    />
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </FieldContent>
-                </Field>
-              )}
-            />
-            <Controller
-              name="email"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field>
-                  <FieldLabel>Email</FieldLabel>
-                  <FieldContent>
-                    <Input
-                      type="email"
-                      placeholder="user@example.com"
-                      aria-invalid={fieldState.invalid}
-                      {...field}
-                    />
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </FieldContent>
-                </Field>
-              )}
-            />
-            <Controller
-              name="username"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field>
-                  <FieldLabel>Username</FieldLabel>
-                  <FieldContent>
-                    <InputGroup>
-                      <InputGroupInput
+    <ScrollArea className="w-full h-full">
+      <div className="flex flex-col m-4">
+        <p className="text-lg font-semibold mb-4">
+          {id === null ? "New Password Item" : "View / Modify Password Item"}
+        </p>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <FieldSet>
+            <FieldGroup>
+              <Controller
+                name="name"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>Item Name</FieldLabel>
+                    <FieldContent>
+                      <Input
                         type="text"
-                        placeholder="Username"
+                        placeholder="Item Name"
                         aria-invalid={fieldState.invalid}
                         {...field}
                       />
-                      <InputGroupAddon align="inline-end">
-                        <InputGroupButton
-                          aria-label="copy"
-                          title="copy"
-                          size="icon-xs"
-                          onClick={async () => {
-                            void navigator.clipboard.writeText(
-                              form.getValues("username"),
-                            );
-                            setUsernameCopied(true);
-                          }}
-                        >
-                          {usernameCopied ? <CopyCheck /> : <Copy />}
-                        </InputGroupButton>
-                      </InputGroupAddon>
-                    </InputGroup>
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </FieldContent>
-                </Field>
-              )}
-            />
-            <Controller
-              name="password"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field>
-                  <FieldLabel>Password</FieldLabel>
-                  <FieldContent>
-                    <InputGroup>
-                      <InputGroupInput
-                        type="password"
-                        placeholder="••••••••"
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </FieldContent>
+                  </Field>
+                )}
+              />
+              <Controller
+                name="email"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>Email</FieldLabel>
+                    <FieldContent>
+                      <Input
+                        type="email"
+                        placeholder="user@example.com"
                         aria-invalid={fieldState.invalid}
                         {...field}
                       />
-                      <InputGroupAddon align="inline-end">
-                        <InputGroupButton
-                          aria-label="copy"
-                          title="copy"
-                          size="icon-xs"
-                          onClick={async () => {
-                            void navigator.clipboard.writeText(
-                              form.getValues("password"),
-                            );
-                            setPasswordCopied(true);
-                          }}
-                        >
-                          {passwordCopied ? <CopyCheck /> : <Copy />}
-                        </InputGroupButton>
-                      </InputGroupAddon>
-                    </InputGroup>
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </FieldContent>
-                </Field>
-              )}
-            />
-            <Controller
-              name="websites"
-              control={form.control}
-              render={({ fieldState }) => (
-                <Field>
-                  <FieldLabel>Website(s)</FieldLabel>
-                  <FieldContent>
-                    <div className="flex flex-col gap-1">
-                      {form.getValues("websites").map((item, index) => (
-                        <Input
-                          key={index}
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </FieldContent>
+                  </Field>
+                )}
+              />
+              <Controller
+                name="username"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>Username</FieldLabel>
+                    <FieldContent>
+                      <InputGroup>
+                        <InputGroupInput
                           type="text"
-                          placeholder="example.com"
-                          defaultValue={item}
+                          placeholder="Username"
                           aria-invalid={fieldState.invalid}
-                          onInput={(event) => {
+                          {...field}
+                        />
+                        <InputGroupAddon align="inline-end">
+                          <InputGroupButton
+                            aria-label="copy"
+                            title="copy"
+                            size="icon-xs"
+                            onClick={async () => {
+                              void navigator.clipboard.writeText(
+                                form.getValues("username"),
+                              );
+                              setUsernameCopied(true);
+                            }}
+                          >
+                            {usernameCopied ? <CopyCheck /> : <Copy />}
+                          </InputGroupButton>
+                        </InputGroupAddon>
+                      </InputGroup>
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </FieldContent>
+                  </Field>
+                )}
+              />
+              <Controller
+                name="password"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>Password</FieldLabel>
+                    <FieldContent>
+                      <InputGroup>
+                        <InputGroupInput
+                          type={passwordHidden ? "password" : "text"}
+                          placeholder="••••••••"
+                          aria-invalid={fieldState.invalid}
+                          {...field}
+                        />
+                        <InputGroupAddon align="inline-end">
+                          <InputGroupButton
+                            aria-label="show-password"
+                            title="show-password"
+                            size="icon-xs"
+                            onClick={async () => {
+                              setPasswordHidden(!passwordHidden);
+                            }}
+                          >
+                            {passwordHidden ? <EyeOff /> : <Eye />}
+                          </InputGroupButton>
+                        </InputGroupAddon>
+                        <InputGroupAddon align="inline-end">
+                          <InputGroupButton
+                            aria-label="copy"
+                            title="copy"
+                            size="icon-xs"
+                            onClick={async () => {
+                              void navigator.clipboard.writeText(
+                                form.getValues("password"),
+                              );
+                              setPasswordCopied(true);
+                            }}
+                          >
+                            {passwordCopied ? <CopyCheck /> : <Copy />}
+                          </InputGroupButton>
+                        </InputGroupAddon>
+                      </InputGroup>
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </FieldContent>
+                  </Field>
+                )}
+              />
+              <Controller
+                name="websites"
+                control={form.control}
+                render={({ fieldState }) => (
+                  <Field>
+                    <FieldLabel>Website(s)</FieldLabel>
+                    <FieldContent>
+                      <div className="flex flex-col gap-1">
+                        {form.getValues("websites").map((item, index) => (
+                          <Input
+                            key={index}
+                            type="text"
+                            placeholder="example.com"
+                            defaultValue={item}
+                            aria-invalid={fieldState.invalid}
+                            onInput={(event) => {
+                              const websites = form.getValues("websites");
+                              websites[index] = event.currentTarget.value;
+                              form.setValue("websites", websites);
+                            }}
+                          />
+                        ))}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
                             const websites = form.getValues("websites");
-                            websites[index] = event.currentTarget.value;
+                            websites.push("");
                             form.setValue("websites", websites);
                           }}
-                        />
-                      ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          const websites = form.getValues("websites");
-                          websites.push("");
-                          form.setValue("websites", websites);
-                        }}
-                      >
-                        <PlusIcon />
-                      </Button>
-                    </div>
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </FieldContent>
-                </Field>
-              )}
-            />
-            <Controller
-              name="notes"
-              control={form.control}
-              render={({ field, fieldState }) => (
-                <Field>
-                  <FieldLabel>Notes</FieldLabel>
-                  <FieldContent>
-                    <Textarea
-                      placeholder="Notes"
-                      aria-invalid={fieldState.invalid}
-                      {...field}
-                    />
-                    {fieldState.invalid && (
-                      <FieldError errors={[fieldState.error]} />
-                    )}
-                  </FieldContent>
-                </Field>
-              )}
-            />
-          </FieldGroup>
-        </FieldSet>
-        <Button type="submit" disabled={processState}>
-          {processState && <Spinner />}
-          Submit
-        </Button>
-      </form>
-    </div>
+                        >
+                          <PlusIcon />
+                        </Button>
+                      </div>
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </FieldContent>
+                  </Field>
+                )}
+              />
+              <Controller
+                name="notes"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>Notes</FieldLabel>
+                    <FieldContent>
+                      <Textarea
+                        placeholder="Notes"
+                        aria-invalid={fieldState.invalid}
+                        {...field}
+                      />
+                      {fieldState.invalid && (
+                        <FieldError errors={[fieldState.error]} />
+                      )}
+                    </FieldContent>
+                  </Field>
+                )}
+              />
+              <Field>
+                <Button type="submit" disabled={processState}>
+                  {processState && <Spinner />}
+                  Submit
+                </Button>
+              </Field>
+            </FieldGroup>
+          </FieldSet>
+        </form>
+      </div>
+    </ScrollArea>
   );
 };

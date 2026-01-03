@@ -6,8 +6,14 @@ import {
 } from "@/services/items/password.ts";
 import { paths } from "@/config/paths.ts";
 import { toast } from "sonner";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area.tsx";
+import { Button } from "@/components/ui/button.tsx";
 
-export const PasswordList = () => {
+interface PasswordListProps {
+  setItemId: (arg0: number | null) => void;
+}
+
+export const PasswordList = ({ setItemId }: PasswordListProps) => {
   const navigate = useNavigate();
 
   const [items, setItems] = useState<PasswordListItem[] | undefined>(undefined);
@@ -40,13 +46,26 @@ export const PasswordList = () => {
   }, []);
 
   return (
-    <div className="flex flex-col h-full w-full gap-4">
-      {items !== undefined &&
-        items.map((item) => (
-          <div className="text-left">
-            <p>{item.name}</p>
-          </div>
-        ))}
-    </div>
+    <ScrollArea className="w-full h-full">
+      <div className="flex flex-col mr-4">
+        {items !== undefined &&
+          items.map((item) => (
+            <Button
+              key={item.id}
+              variant="ghost"
+              className="w-full h-auto justify-start text-left g-2"
+              onClick={() => setItemId(item.id)}
+            >
+              <div>
+                <p>{item.name}</p>
+                <p className="text-gray-500">
+                  {item.username.length === 0 ? item.username : item.email}
+                </p>
+              </div>
+            </Button>
+          ))}
+        <ScrollBar orientation="vertical" />
+      </div>
+    </ScrollArea>
   );
 };
