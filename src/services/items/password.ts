@@ -1,19 +1,147 @@
-// import type { passwordSchema } from "@/components/forms/password-item.tsx";
-// import { fetcher } from "@/services/fetcher.ts";
-// import { z } from "zod";
+import type { passwordSchema } from "@/services/form-schemas/password-item.ts";
+import { fetcher } from "@/services/fetcher.ts";
+import { z } from "zod";
+import { encryptItem } from "@/services/crypto/item-encryption.ts";
+import { masterKey } from "@/services/master-key.ts";
+import { isAxiosError } from "axios";
+import { decryptItem } from "@/services/crypto/item-decryption.ts";
+import { AuthManager } from "@/store/auth.ts";
 
-// const newPasswordItem = (data: z.infer<typeof passwordSchema>) => {
-//   try {
-//     fetcher.post(
-//       `/api/${user_id}/items/password/new`,
-//       {
-//         "websites": data.websites,
-//         "username": data.username.length === 0 ? null : data.username,
-//         "email": data.email,
-//         "encrypted_password": null,//  TODO
-//         "notes": data.password.length === 0 ? null: data.username,
-//       }
-//     );
-//
-//   }
-// };
+export const newPasswordItem = async (data: z.infer<typeof passwordSchema>) => {
+  try {
+    await fetcher.post(`/api/${AuthManager.userId ?? ""}/items/password`, {
+      name: data.name,
+      websites: data.websites.join(),
+      username: data.username,
+      email: data.email ?? "",
+      encrypted_password: await encryptItem({
+        masterKey: masterKey ?? "",
+        itemPlaintext: data.password,
+      }),
+      notes: data.notes,
+    });
+    return 200;
+  } catch (error) {
+    if (isAxiosError(error)) {
+      return error.status ?? 500;
+    } else {
+      return 500;
+    }
+  }
+};
+
+export const updatePasswordItem = async (
+  data: z.infer<typeof passwordSchema>,
+  item_id: string,
+) => {
+  try {
+    await fetcher.put(
+      `/api/${AuthManager.userId ?? ""}/items/password/${item_id}`,
+      {
+        name: data.name,
+        websites: data.websites.join(),
+        username: data.username,
+        email: data.email,
+        encrypted_password: await encryptItem({
+          masterKey: masterKey ?? "",
+          itemPlaintext: data.password,
+        }),
+        notes: data.notes,
+      },
+    );
+    return 200;
+  } catch (error) {
+    if (isAxiosError(error)) {
+      return error.status ?? 500;
+    } else {
+      return 500;
+    }
+  }
+};
+
+export interface PasswordItem {
+  name: string;
+  username: string;
+  email: string;
+  password: string;
+  website: string[];
+  notes: string;
+}
+export const getPasswordItem = async (item_id: string) => {
+  try {
+    const res = await fetcher.get<{
+      name: string;
+      username: string;
+      email: string;
+      encrypted_password: string;
+      website: string;
+      notes: string;
+    }>(`/api/${AuthManager.userId ?? ""}/items/password/${item_id}`);
+
+    return {
+      name: res.data.name,
+      username: res.data.username,
+      email: res.data.email,
+      password: await decryptItem({
+        masterKey: masterKey ?? "",
+        encryptedItem: res.data.encrypted_password,
+      }),
+      websites: res.data.website.split(","),
+      notes: res.data.notes,
+    };
+  } catch (error) {
+    if (isAxiosError(error)) {
+      return error.status ?? 500;
+    } else {
+      return 500;
+    }
+  }
+};
+
+export interface PasswordListItem {
+  name: string;
+  username: string;
+  email: string;
+  website: string[];
+  notes: string;
+}
+
+export const getPasswordItems = async () => {
+  try {
+    const res = await fetcher.get<{
+      passwords: {
+        name: string;
+        username: string;
+        email: string;
+        website: string;
+        notes: string;
+      }[];
+    }>(`/api/${AuthManager.userId ?? ""}/items`);
+
+    const passwords: {
+      name: string;
+      username: string;
+      email: string;
+      website: string[];
+      notes: string;
+    }[] = [];
+
+    for (const item of res.data.passwords) {
+      passwords.push({
+        name: item.name,
+        username: item.username,
+        email: item.email,
+        website: item.website.split(","),
+        notes: item.notes,
+      });
+    }
+
+    return passwords;
+  } catch (error) {
+    if (isAxiosError(error)) {
+      return error.status ?? 500;
+    } else {
+      return 500;
+    }
+  }
+};

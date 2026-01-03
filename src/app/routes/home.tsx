@@ -5,6 +5,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable.tsx";
 import { PasswordForm } from "@/components/forms/password-item.tsx";
+import { PasswordList } from "@/components/list/password-list.tsx";
 
 export const Home = () => {
   return (
@@ -15,7 +16,9 @@ export const Home = () => {
         </TabsList>
         <TabsContent value="passwords">
           <ResizablePanelGroup direction="horizontal">
-            <ResizablePanel></ResizablePanel>
+            <ResizablePanel>
+              <PasswordList />
+            </ResizablePanel>
             <ResizableHandle withHandle />
             <ResizablePanel>
               {/* TODO limit panel size */}

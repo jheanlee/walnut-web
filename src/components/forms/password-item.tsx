@@ -17,9 +17,17 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group.tsx";
-import { CopyCheck, Copy } from "lucide-react";
+import { CopyCheck, Copy, PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { passwordSchema } from "@/services/form-schemas/password-item.ts";
+import {
+  getPasswordItem,
+  newPasswordItem,
+  updatePasswordItem,
+} from "@/services/items/password.ts";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner.tsx";
 
 interface PasswordItemProps {
   id: string | null;
@@ -33,13 +41,40 @@ export const PasswordForm = ({ id }: PasswordItemProps) => {
     email: undefined,
     username: "",
     password: "",
-    websites: [],
+    websites: [""],
     notes: "",
   });
   const [usernameCopied, setUsernameCopied] = useState<boolean>(false);
   const [passwordCopied, setPasswordCopied] = useState<boolean>(false);
+  const [processState, setProcessState] = useState<boolean>(false);
 
-  useEffect(() => {}, []);
+  useEffect(() => {
+    if (id !== null) {
+      const fetchPassword = async () => {
+        const res = await getPasswordItem(id);
+        if (typeof res !== "number") {
+          setOriginalValues(res);
+        } else {
+          toast.error(() => {
+            switch (res) {
+              case 400:
+                return "Invalid item";
+              case 401:
+                return "Session expired";
+              case 403:
+                return "Access denied";
+              case 500:
+                return "Unable to connect to server";
+              default:
+                return `An error has occurred. Error code: ${res}`;
+            }
+          });
+        }
+      };
+
+      void (async () => await fetchPassword())();
+    }
+  }, []);
 
   useEffect(() => {
     if (usernameCopied) {
@@ -66,12 +101,59 @@ export const PasswordForm = ({ id }: PasswordItemProps) => {
   });
 
   const onSubmit = async (values: z.infer<typeof passwordSchema>) => {
-    //  TODO
+    setProcessState(true);
+    if (id === null) {
+      const res = await newPasswordItem(values);
+      if (res === 200) {
+        toast.success("Password item created");
+      } else {
+        toast.error(() => {
+          switch (res) {
+            case 400:
+              return "Invalid item";
+            case 401:
+              return "Session expired";
+            case 403:
+              return "Access denied";
+            case 500:
+              return "Unable to connect to server";
+            default:
+              return `An error has occurred. Error code: ${res}`;
+          }
+        });
+      }
+    } else {
+      const res = await updatePasswordItem(values, id);
+      if (res === 200) {
+        // toast.success("Password item edited");
+      } else {
+        toast.error(() => {
+          switch (res) {
+            case 400:
+              return "Invalid item";
+            case 401:
+              return "Session expired";
+            case 403:
+              return "Access denied";
+            case 500:
+              return "Unable to connect to server";
+            default:
+              return `An error has occurred. Error code: ${res}`;
+          }
+        });
+      }
+    }
+    setProcessState(false);
   };
 
   return (
     <div className="w-full h-full">
-      <form onSubmit={form.handleSubmit(onSubmit)} className="">
+      <form
+        onSubmit={form.handleSubmit(async (form) => {
+          setProcessState(true);
+          await onSubmit(form);
+        })}
+      >
         <FieldSet>
           <FieldGroup>
             <Controller
@@ -191,16 +273,37 @@ export const PasswordForm = ({ id }: PasswordItemProps) => {
             <Controller
               name="websites"
               control={form.control}
-              render={({ field, fieldState }) => (
+              render={({ fieldState }) => (
                 <Field>
                   <FieldLabel>Website(s)</FieldLabel>
                   <FieldContent>
-                    <Input
-                      type="url"
-                      placeholder="example.com"
-                      aria-invalid={fieldState.invalid}
-                      {...field}
-                    />
+                    <div className="flex flex-col gap-1">
+                      {form.getValues("websites").map((item, index) => (
+                        <Input
+                          key={index}
+                          type="text"
+                          placeholder="example.com"
+                          defaultValue={item}
+                          aria-invalid={fieldState.invalid}
+                          onInput={(event) => {
+                            const websites = form.getValues("websites");
+                            websites[index] = event.currentTarget.value;
+                            form.setValue("websites", websites);
+                          }}
+                        />
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          const websites = form.getValues("websites");
+                          websites.push("");
+                          form.setValue("websites", websites);
+                        }}
+                      >
+                        <PlusIcon />
+                      </Button>
+                    </div>
                     {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />
                     )}
@@ -208,7 +311,6 @@ export const PasswordForm = ({ id }: PasswordItemProps) => {
                 </Field>
               )}
             />
-            {/* TODO multiple websites*/}
             <Controller
               name="notes"
               control={form.control}
@@ -230,6 +332,10 @@ export const PasswordForm = ({ id }: PasswordItemProps) => {
             />
           </FieldGroup>
         </FieldSet>
+        <Button type="submit" disabled={processState}>
+          {processState && <Spinner />}
+          Submit
+        </Button>
       </form>
     </div>
   );

@@ -15,6 +15,13 @@ const createAppRouter = () =>
           Component: Home,
         },
         {
+          path: paths.root.login.path,
+          lazy: async () => {
+            const { Login } = await import("@/app/routes/login.tsx");
+            return { Component: Login };
+          },
+        },
+        {
           path: "*",
           Component: NotFound,
         },

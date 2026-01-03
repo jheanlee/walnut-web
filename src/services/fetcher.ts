@@ -2,6 +2,7 @@ import axios from "axios";
 import { paths } from "@/config/paths.ts";
 import { Buffer } from "buffer";
 import { toast } from "sonner";
+import { AuthManager } from "@/store/auth.ts";
 
 // public fetcher (login & refresh token)
 export const publicFetcher = axios.create();
@@ -10,20 +11,12 @@ export const publicFetcher = axios.create();
 export const cronFetcher = axios.create();
 
 cronFetcher.interceptors.request.use(async (config) => {
-  const access_token = localStorage.getItem("rivulet.access_token");
-  if (access_token === null) {
-    window.location.href = paths.root.login.getHref();
-    toast.error("Login required");
-    return config;
-  }
-
-  config.headers["Authorization"] = access_token;
-
   if (
+    AuthManager.token === undefined ||
     JSON.parse(
-      Buffer.from(access_token.split(".")[1], "base64").toString("ascii"),
+      Buffer.from(AuthManager.token.split(".")[1], "base64").toString("ascii"),
     ).exp <
-    Date.now() / 1000
+      Date.now() / 1000
   ) {
     window.location.href = paths.root.login.getHref();
     toast.error("Session expired");
@@ -36,20 +29,14 @@ cronFetcher.interceptors.request.use(async (config) => {
 export const fetcher = axios.create();
 
 fetcher.interceptors.request.use(async (config) => {
-  const access_token = localStorage.getItem("rivulet.access_token");
-  if (access_token === null) {
-    window.location.href = paths.root.login.getHref();
-    toast.error("Login required");
-    return config;
-  }
-
-  config.headers["Authorization"] = access_token;
+  config.headers["Authorization"] = AuthManager.token;
 
   if (
+    AuthManager.token === undefined ||
     JSON.parse(
-      Buffer.from(access_token.split(".")[1], "base64").toString("ascii"),
+      Buffer.from(AuthManager.token.split(".")[1], "base64").toString("ascii"),
     ).exp <
-    Date.now() / 1000 + 300
+      Date.now() / 1000 + 300
   ) {
     // const res = await refreshToken();
     // if (res !== 200) {
