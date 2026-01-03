@@ -11,9 +11,13 @@ import { Button } from "@/components/ui/button.tsx";
 
 interface PasswordListProps {
   setItemId: (arg0: number | null) => void;
+  updateTrigger: boolean;
 }
 
-export const PasswordList = ({ setItemId }: PasswordListProps) => {
+export const PasswordList = ({
+  setItemId,
+  updateTrigger,
+}: PasswordListProps) => {
   const navigate = useNavigate();
 
   const [items, setItems] = useState<PasswordListItem[] | undefined>(undefined);
@@ -43,7 +47,7 @@ export const PasswordList = ({ setItemId }: PasswordListProps) => {
     };
 
     void (async () => await getItems())();
-  }, []);
+  }, [updateTrigger]);
 
   return (
     <ScrollArea className="w-full h-full">
@@ -59,7 +63,7 @@ export const PasswordList = ({ setItemId }: PasswordListProps) => {
               <div>
                 <p>{item.name}</p>
                 <p className="text-gray-500">
-                  {item.username.length === 0 ? item.username : item.email}
+                  {item.username.length !== 0 ? item.username : item.email}
                 </p>
               </div>
             </Button>

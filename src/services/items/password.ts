@@ -1,11 +1,10 @@
 import type { passwordSchema } from "@/services/form-schemas/password-item.ts";
 import { fetcher } from "@/services/fetcher.ts";
 import { z } from "zod";
-import { encryptItem } from "@/services/crypto/item-encryption.ts";
 import { masterKey } from "@/services/master-key.ts";
 import { isAxiosError } from "axios";
-import { decryptItem } from "@/services/crypto/item-decryption.ts";
 import { AuthManager } from "@/store/auth.ts";
+import { cryptoWorker } from "@/lib/crypto-worker-client-singleton.ts";
 
 export const newPasswordItem = async (data: z.infer<typeof passwordSchema>) => {
   try {
@@ -14,10 +13,12 @@ export const newPasswordItem = async (data: z.infer<typeof passwordSchema>) => {
       websites: data.websites.join(),
       username: data.username,
       email: data.email ?? "",
-      encrypted_password: await encryptItem({
-        //  TODO use web worker to avoid blocking main thread
-        masterKey: masterKey ?? "",
-        itemPlaintext: data.password,
+      encrypted_password: await cryptoWorker.run({
+        type: "item-encryption",
+        payload: {
+          masterKey: masterKey ?? "",
+          itemPlaintext: data.password,
+        },
       }),
       notes: data.notes,
     });
@@ -43,10 +44,12 @@ export const updatePasswordItem = async (
         websites: data.websites.join(),
         username: data.username,
         email: data.email,
-        encrypted_password: await encryptItem({
-          //  TODO use web worker to avoid blocking main thread
-          masterKey: masterKey ?? "",
-          itemPlaintext: data.password,
+        encrypted_password: await cryptoWorker.run({
+          type: "item-encryption",
+          payload: {
+            masterKey: masterKey ?? "",
+            itemPlaintext: data.password,
+          },
         }),
         notes: data.notes,
       },
@@ -84,9 +87,12 @@ export const getPasswordItem = async (item_id: number) => {
       name: res.data.name,
       username: res.data.username,
       email: res.data.email,
-      password: await decryptItem({
-        masterKey: masterKey ?? "",
-        encryptedItem: res.data.encrypted_password,
+      password: await cryptoWorker.run({
+        type: "item-decryption",
+        payload: {
+          masterKey: masterKey ?? "",
+          encryptedItem: res.data.encrypted_password,
+        },
       }),
       websites: res.data.website.split(","),
       notes: res.data.notes,

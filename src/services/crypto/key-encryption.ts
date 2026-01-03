@@ -3,14 +3,14 @@ import { gcmsiv } from "@noble/ciphers/aes.js";
 import { argon2idAsync } from "@noble/hashes/argon2.js";
 import { Buffer } from "buffer";
 
-interface GetDecryptedKeyProps {
+export interface GetEncryptedKeyProps {
   masterPassword: string;
   key: string;
 }
 export const getEncryptedKey = async ({
   masterPassword,
   key,
-}: GetDecryptedKeyProps) => {
+}: GetEncryptedKeyProps) => {
   const kdfSalt = randomBytes(8);
   const iv = randomBytes(12);
 

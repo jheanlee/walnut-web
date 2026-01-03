@@ -2,7 +2,7 @@ import { gcmsiv } from "@noble/ciphers/aes.js";
 import { argon2idAsync } from "@noble/hashes/argon2.js";
 import { Buffer } from "buffer";
 
-interface GetDecryptedKeyProps {
+export interface GetDecryptedKeyProps {
   masterPassword: string;
   key: string;
 }
