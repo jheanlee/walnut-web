@@ -22,6 +22,13 @@ const createAppRouter = () =>
           },
         },
         {
+          path: paths.root.signup.path,
+          lazy: async () => {
+            const { Signup } = await import("@/app/routes/signup.tsx");
+            return { Component: Signup };
+          },
+        },
+        {
           path: "*",
           Component: NotFound,
         },

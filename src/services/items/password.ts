@@ -1,7 +1,6 @@
 import type { passwordSchema } from "@/services/form-schemas/password-item.ts";
 import { fetcher } from "@/services/fetcher.ts";
 import { z } from "zod";
-import { masterKey } from "@/services/master-key.ts";
 import { isAxiosError } from "axios";
 import { AuthManager } from "@/store/auth.ts";
 import { cryptoWorker } from "@/lib/crypto-worker-client-singleton.ts";
@@ -16,7 +15,7 @@ export const newPasswordItem = async (data: z.infer<typeof passwordSchema>) => {
       encrypted_password: await cryptoWorker.run({
         type: "item-encryption",
         payload: {
-          masterKey: masterKey ?? "",
+          masterKey: AuthManager.masterKey ?? "",
           itemPlaintext: data.password,
         },
       }),
@@ -47,7 +46,7 @@ export const updatePasswordItem = async (
         encrypted_password: await cryptoWorker.run({
           type: "item-encryption",
           payload: {
-            masterKey: masterKey ?? "",
+            masterKey: AuthManager.masterKey ?? "",
             itemPlaintext: data.password,
           },
         }),
@@ -73,6 +72,7 @@ export interface PasswordItem {
   notes: string;
 }
 export const getPasswordItem = async (item_id: number) => {
+  console.log(AuthManager.masterKey);
   try {
     const res = await fetcher.get<{
       name: string;
@@ -90,7 +90,7 @@ export const getPasswordItem = async (item_id: number) => {
       password: await cryptoWorker.run({
         type: "item-decryption",
         payload: {
-          masterKey: masterKey ?? "",
+          masterKey: AuthManager.masterKey ?? "",
           encryptedItem: res.data.encrypted_password,
         },
       }),
@@ -100,6 +100,8 @@ export const getPasswordItem = async (item_id: number) => {
   } catch (error) {
     if (isAxiosError(error)) {
       return error.status ?? 500;
+    } else if (error instanceof Error && error.message.startsWith("crypto: ")) {
+      return 1403;
     } else {
       return 500;
     }

@@ -21,3 +21,34 @@ export const login = async (data: { username: string; password: string }) => {
     }
   }
 };
+
+export const isUsernameAvailable = async (data: { username: string }) => {
+  try {
+    const res = await publicFetcher.get<{
+      available: boolean;
+    }>("/api/master/username", {
+      params: data,
+    });
+
+    return res.data.available;
+  } catch (error) {
+    if (isAxiosError(error)) {
+      return error.status || 500;
+    } else {
+      return 500;
+    }
+  }
+};
+
+export const signup = async (data: { username: string; password: string }) => {
+  try {
+    await publicFetcher.post("/api/master/signup", data);
+    return 200;
+  } catch (error) {
+    if (isAxiosError(error)) {
+      return error.status || 500;
+    } else {
+      return 500;
+    }
+  }
+};

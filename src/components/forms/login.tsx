@@ -12,64 +12,105 @@ import {
   FieldLabel,
   FieldSet,
 } from "@/components/ui/field.tsx";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-
-const formSchema = z.object({
-  username: z
-    .string()
-    .min(4, {
-      message: "Username must be at least 4 characters.",
-    })
-    .max(64, {
-      message: "Username must not exceed 64 characters.",
-    })
-    .regex(/^[A-Za-z0-9_-]+$/, {
-      message:
-        "Username should only contain letters (A-Z, a-z), numbers (0-9), underscores (_) and hyphens (-).",
-    }),
-
-  password: z
-    .string()
-    .min(8, {
-      message: "Password must be at least 8 characters.",
-    })
-    .max(256, {
-      message: "Password must not exceed 256 characters.",
-    })
-    .regex(/^[A-Za-z0-9~!@#$%^&*()_\-+={}\[\]|\\:;,.\/]+$/, {
-      message:
-        "Password should only contain letters (A-Z, a-z), numbers (0-9) and symbols.",
-    }),
-});
+import { localStorageKeys } from "@/config/local-storage.ts";
+import { validateKey } from "@/lib/key.ts";
+import { AuthManager } from "@/store/auth.ts";
+import { getMasterKey, setMasterKey } from "@/services/master-key.ts";
+import { loginSchema } from "@/services/form-schemas/login.ts";
+import { toast } from "sonner";
 
 export const LoginForm = () => {
   const navigate = useNavigate();
   const [submitStatus, setSubmitStatus] = useState<number>(200);
+  const [key, setKey] = useState<string | undefined>(undefined);
+
   const getSubmitStatusMessage = () => {
     switch (submitStatus) {
       case 401:
-        return "Incorrect username or password.";
+        return "Incorrect username or password";
       case 500:
-        return "Unable to connect to the server.";
+        return "Unable to connect to the server";
+      case 1403:
+        return "Unable to decrypt master key";
       default:
         return `An error has occurred. Error code: ${submitStatus}`;
     }
   };
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       username: "",
       password: "",
+      masterKey: "",
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    const res = await login(values);
+  useEffect(() => {
+    const localStorageMasterKey = localStorage.getItem(
+      localStorageKeys.masterKey,
+    );
+    if (localStorageMasterKey == null) {
+      AuthManager.masterKey = undefined;
+      localStorage.removeItem(localStorageKeys.masterKey);
+    } else {
+      setKey(localStorageMasterKey);
+    }
+
+    console.log(localStorageMasterKey);
+  }, []);
+
+  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+    if (
+      localStorage.getItem(localStorageKeys.masterKey) === null &&
+      values.masterKey === ""
+    ) {
+      form.setError("masterKey", {
+        message: "Please enter your master key",
+      });
+      return;
+    }
+
+    if (
+      localStorage.getItem(localStorageKeys.masterKey) === null &&
+      !validateKey(values.masterKey)
+    ) {
+      form.setError("masterKey", { message: "Invalid key" });
+      return;
+    }
+
+    const res = await login({
+      username: values.username,
+      password: values.password,
+    });
     setSubmitStatus(res);
+
     if (res === 200) {
-      navigate(paths.root.home.getHref());
+      if (localStorage.getItem(localStorageKeys.masterKey) === null) {
+        await setMasterKey({
+          masterPassword: values.password,
+          masterKey: values.masterKey,
+        });
+        AuthManager.masterKey = values.masterKey;
+        navigate(paths.root.home.getHref());
+      } else {
+        const decryptRes = await getMasterKey({
+          masterPassword: values.password,
+        });
+        if (decryptRes !== 200) {
+          setSubmitStatus(1403);
+          AuthManager.masterKey = undefined;
+          localStorage.removeItem(localStorageKeys.masterKey);
+          toast.error("Unable to decrypt master key");
+          setTimeout(() => {
+            window.location.reload();
+          }, 3000);
+        } else {
+          navigate(paths.root.home.getHref());
+        }
+      }
     }
   };
 
@@ -117,12 +158,49 @@ export const LoginForm = () => {
                 </Field>
               )}
             />
+            {key === undefined && (
+              <Controller
+                name="masterKey"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>Master Key</FieldLabel>
+                    <Input
+                      type="text"
+                      placeholder=""
+                      aria-invalid={fieldState.invalid}
+                      {...field}
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+            )}
             {submitStatus !== 200 && (
               <FieldError>{getSubmitStatusMessage()}</FieldError>
             )}
-            <Field>
-              <Button type="submit">Submit</Button>
-            </Field>
+            <div className="flex flex-col gap-2">
+              {key !== undefined && (
+                <Field>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      AuthManager.masterKey = undefined;
+                      localStorage.removeItem(localStorageKeys.masterKey);
+                      setKey(undefined);
+                    }}
+                  >
+                    Reset master key
+                  </Button>
+                </Field>
+              )}
+              <Field>
+                <Button type="submit">Submit</Button>
+              </Field>
+            </div>
           </FieldGroup>
         </FieldSet>
       </form>

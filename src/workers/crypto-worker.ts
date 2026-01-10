@@ -1,19 +1,13 @@
-import {
-  decryptItem,
-  type DecryptItemProps,
-} from "@/services/crypto/item-decryption.ts";
-import {
-  encryptItem,
-  type EncryptItemProps,
-} from "@/services/crypto/item-encryption.ts";
+import { decryptItem, type DecryptItemProps } from "@/lib/item-decryption.ts";
+import { encryptItem, type EncryptItemProps } from "@/lib/item-encryption.ts";
 import {
   getDecryptedKey,
   type GetDecryptedKeyProps,
-} from "@/services/crypto/key-decryption.ts";
+} from "@/lib/key-decryption.ts";
 import {
   getEncryptedKey,
   type GetEncryptedKeyProps,
-} from "@/services/crypto/key-encryption.ts";
+} from "@/lib/key-encryption.ts";
 
 export interface ItemDecryptionRequest {
   id: string;
@@ -84,7 +78,10 @@ self.onmessage = async (event: MessageEvent<CryptoWorkerRequest>) => {
     self.postMessage({
       id,
       success: false,
-      error: err instanceof Error ? err.message : "unknown error",
+      error:
+        err instanceof Error
+          ? `crypto: ${err.message}`
+          : "crypto: unknown error",
     } satisfies CryptoWorkerResponse);
   }
 };

@@ -46,6 +46,9 @@ export const PasswordForm = ({
   const [passwordCopied, setPasswordCopied] = useState<boolean>(false);
   const [passwordHidden, setPasswordHidden] = useState<boolean>(true);
   const [processState, setProcessState] = useState<boolean>(false);
+  const [decryptionError, setDecryptionError] = useState<string | undefined>(
+    undefined,
+  );
 
   const form = useForm<z.infer<typeof passwordSchema>>({
     resolver: zodResolver(passwordSchema),
@@ -64,6 +67,7 @@ export const PasswordForm = ({
     setPasswordCopied(false);
     setPasswordHidden(true);
     setProcessState(false);
+    setDecryptionError(undefined);
     if (id !== null) {
       setDecryptingState(true);
       const fetchPassword = async () => {
@@ -71,7 +75,7 @@ export const PasswordForm = ({
         if (typeof res !== "number") {
           form.reset(res);
         } else {
-          toast.error(() => {
+          const errorMessage = (() => {
             switch (res) {
               case 400:
                 return "Invalid item";
@@ -81,10 +85,15 @@ export const PasswordForm = ({
                 return "Access denied";
               case 500:
                 return "Unable to connect to server";
+              case 1403:
+                return "Failed to decrypt item: invalid key or corrupted item";
               default:
                 return `An error has occurred. Error code: ${res}`;
             }
-          });
+          })();
+
+          setDecryptionError(errorMessage);
+          toast.error(errorMessage);
         }
         setDecryptingState(false);
       };
@@ -176,7 +185,8 @@ export const PasswordForm = ({
           {id === null ? "New Password Item" : "View / Modify Password Item"}
         </p>
         {decryptingState && <p>Decrypting...</p>}
-        {!decryptingState && (
+        {decryptionError && <p>{decryptionError}</p>}
+        {!decryptingState && decryptionError === undefined && (
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <FieldSet>
               <FieldGroup>
