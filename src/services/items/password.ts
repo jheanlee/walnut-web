@@ -63,6 +63,20 @@ export const updatePasswordItem = async (
   }
 };
 
+export const deletePasswordItem = async (item_id: number) => {
+  try {
+    await fetcher.delete(
+      `/api/${AuthManager.userId ?? ""}/items/password/${item_id}`,
+    );
+    return 200;
+  } catch (error) {
+    if (isAxiosError(error)) {
+      return error.status ?? 500;
+    }
+    return 500;
+  }
+};
+
 export interface PasswordItem {
   name: string;
   username: string;

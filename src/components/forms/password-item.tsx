@@ -21,6 +21,7 @@ import { CopyCheck, Copy, PlusIcon, EyeOff, Eye } from "lucide-react";
 import { useEffect, useState } from "react";
 import { passwordSchema } from "@/services/form-schemas/password-item.ts";
 import {
+  deletePasswordItem,
   getPasswordItem,
   newPasswordItem,
   updatePasswordItem,
@@ -32,12 +33,14 @@ import { ScrollArea } from "@/components/ui/scroll-area.tsx";
 
 interface PasswordItemProps {
   id: number | null;
+  setId: (arg0: number | null) => void;
   updateTrigger: boolean;
   setUpdateTrigger: (arg0: boolean) => void;
 }
 
 export const PasswordForm = ({
   id,
+  setId,
   updateTrigger,
   setUpdateTrigger,
 }: PasswordItemProps) => {
@@ -83,6 +86,8 @@ export const PasswordForm = ({
                 return "Session expired";
               case 403:
                 return "Access denied";
+              case 404:
+                return "This item does not exist";
               case 500:
                 return "Unable to connect to server";
               case 1403:
@@ -147,12 +152,20 @@ export const PasswordForm = ({
             case 403:
               return "Access denied";
             case 500:
-              return "Unable to connect to server";
+              return "Unable to connect to the server";
             default:
               return `An error has occurred. Error code: ${res}`;
           }
         });
       }
+      form.reset({
+        name: "",
+        email: "",
+        username: "",
+        password: "",
+        websites: [""],
+        notes: "",
+      });
     } else {
       const res = await updatePasswordItem(values, id);
       if (res === 200) {
@@ -166,8 +179,10 @@ export const PasswordForm = ({
               return "Session expired";
             case 403:
               return "Access denied";
+            case 404:
+              return "This item does not exist";
             case 500:
-              return "Unable to connect to server";
+              return "Unable to connect to the server";
             default:
               return `An error has occurred. Error code: ${res}`;
           }
@@ -178,9 +193,33 @@ export const PasswordForm = ({
     setUpdateTrigger(!updateTrigger);
   };
 
+  const deleteItem = async (id: number) => {
+    const res = await deletePasswordItem(id);
+    if (res == 200) {
+      toast.success("Password item deleted");
+    } else {
+      toast.error(() => {
+        switch (res) {
+          case 401:
+            return "Session expired";
+          case 403:
+            return "Access denied";
+          case 404:
+            return "This item does not exist";
+          case 500:
+            return "Unable to connect to the server";
+          default:
+            return `An error has occurred. Error code: ${res}`;
+        }
+      });
+    }
+    setId(null);
+    setUpdateTrigger(!updateTrigger);
+  };
+
   return (
     <ScrollArea className="w-full h-full">
-      <div className="flex flex-col m-4">
+      <div className="flex flex-col m-4 mb-10">
         <p className="text-lg font-semibold mb-4">
           {id === null ? "New Password Item" : "View / Modify Password Item"}
         </p>
@@ -376,6 +415,19 @@ export const PasswordForm = ({
                     </Field>
                   )}
                 />
+                {id !== null && (
+                  <Field>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={() => {
+                        void (async () => await deleteItem(id))();
+                      }}
+                    >
+                      Delete Item
+                    </Button>
+                  </Field>
+                )}
                 <Field>
                   <Button type="submit" disabled={processState}>
                     {processState && <Spinner />}

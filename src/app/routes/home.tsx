@@ -46,6 +46,7 @@ export const Home = () => {
               {/* TODO limit panel size */}
               <PasswordForm
                 id={itemId}
+                setId={setItemId}
                 updateTrigger={itemListUpdateTrigger}
                 setUpdateTrigger={setItemListUpdateTrigger}
               />
