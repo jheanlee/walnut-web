@@ -1,3 +1,3 @@
 export const localStorageKeys = {
-  masterKey: "branch_vault_master_key",
+  masterKey: "walnut_master_key",
 };
