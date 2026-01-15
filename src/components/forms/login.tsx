@@ -2,8 +2,8 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input.tsx";
-import { login } from "@/services/auth.ts";
-import { useNavigate } from "react-router";
+import { isSignupAvailable, login } from "@/services/auth.ts";
+import { NavLink, useNavigate } from "react-router";
 import { paths } from "@/config/paths.ts";
 import {
   Field,
@@ -25,6 +25,7 @@ export const LoginForm = () => {
   const navigate = useNavigate();
   const [submitStatus, setSubmitStatus] = useState<number>(200);
   const [key, setKey] = useState<string | undefined>(undefined);
+  const [signupAvailable, setSignupAvailable] = useState<boolean>(false);
 
   const getSubmitStatusMessage = () => {
     switch (submitStatus) {
@@ -42,7 +43,7 @@ export const LoginForm = () => {
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: "",
+      username: localStorage.getItem(localStorageKeys.username) ?? "",
       password: "",
       masterKey: "",
     },
@@ -59,10 +60,31 @@ export const LoginForm = () => {
       setKey(localStorageMasterKey);
     }
 
-    console.log(localStorageMasterKey);
+    const getSignupStatus = async () => {
+      const res = await isSignupAvailable();
+      if (res === true) {
+        setSignupAvailable(true);
+      } else {
+        setSignupAvailable(false);
+        if (typeof res === "number") {
+          toast.error("Unable to connect to the server");
+        }
+      }
+    };
+
+    void (async () => await getSignupStatus())();
   }, []);
 
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+    if (
+      localStorage.getItem(localStorageKeys.username) === null &&
+      values.username === ""
+    ) {
+      form.setError("username", {
+        message: "Please enter your username",
+      });
+      return;
+    }
     if (
       localStorage.getItem(localStorageKeys.masterKey) === null &&
       values.masterKey === ""
@@ -82,7 +104,8 @@ export const LoginForm = () => {
     }
 
     const res = await login({
-      username: values.username,
+      username:
+        localStorage.getItem(localStorageKeys.username) ?? values.username,
       password: values.password,
     });
     setSubmitStatus(res);
@@ -92,6 +115,7 @@ export const LoginForm = () => {
         await setMasterKey({
           masterPassword: values.password,
           masterKey: values.masterKey,
+          username: values.username,
         });
         AuthManager.masterKey = values.masterKey;
         navigate(paths.root.home.getHref());
@@ -101,8 +125,6 @@ export const LoginForm = () => {
         });
         if (decryptRes !== 200) {
           setSubmitStatus(1403);
-          AuthManager.masterKey = undefined;
-          localStorage.removeItem(localStorageKeys.masterKey);
           toast.error("Unable to decrypt master key");
           setTimeout(() => {
             window.location.reload();
@@ -131,6 +153,9 @@ export const LoginForm = () => {
                   <Input
                     type="text"
                     placeholder="user"
+                    disabled={
+                      localStorage.getItem(localStorageKeys.username) !== null
+                    }
                     aria-invalid={fieldState.invalid}
                     {...field}
                   />
@@ -190,16 +215,31 @@ export const LoginForm = () => {
                     onClick={() => {
                       AuthManager.masterKey = undefined;
                       localStorage.removeItem(localStorageKeys.masterKey);
+                      localStorage.removeItem(localStorageKeys.username);
                       setKey(undefined);
+                      form.reset({ username: "", password: "", masterKey: "" });
                     }}
                   >
-                    Reset master key
+                    Login as another user
                   </Button>
                 </Field>
               )}
               <Field>
-                <Button type="submit">Submit</Button>
+                <Button type="submit">Login</Button>
               </Field>
+              {signupAvailable ? (
+                <Button type="button" variant="link" asChild>
+                  <NavLink to={paths.root.signup.getHref()}>
+                    <p className="text-sm text-gray-500">
+                      Don't have an account? Signup
+                    </p>
+                  </NavLink>
+                </Button>
+              ) : (
+                <p className="text-sm text-gray-500 text-center">
+                  Signup is disabled by the server
+                </p>
+              )}
             </div>
           </FieldGroup>
         </FieldSet>
