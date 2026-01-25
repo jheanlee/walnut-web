@@ -52,3 +52,16 @@ export const signup = async (data: { username: string; password: string }) => {
     }
   }
 };
+
+export const isSignupAvailable = async () => {
+  try {
+    const res = await publicFetcher.get<{signup_available : boolean}>("/api/master/signup/availability");
+    return res.data.signup_available;
+  } catch (error) {
+    if (isAxiosError(error)) {
+      return error.status || 500;
+    } else {
+      return 500;
+    }
+  }
+}

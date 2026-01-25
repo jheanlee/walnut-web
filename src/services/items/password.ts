@@ -86,7 +86,6 @@ export interface PasswordItem {
   notes: string;
 }
 export const getPasswordItem = async (item_id: number) => {
-  console.log(AuthManager.masterKey);
   try {
     const res = await fetcher.get<{
       name: string;

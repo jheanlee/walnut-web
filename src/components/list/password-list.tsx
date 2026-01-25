@@ -12,11 +12,13 @@ import { Button } from "@/components/ui/button.tsx";
 interface PasswordListProps {
   setItemId: (arg0: number | null) => void;
   updateTrigger: boolean;
+  itemSearchString: string;
 }
 
 export const PasswordList = ({
   setItemId,
   updateTrigger,
+  itemSearchString,
 }: PasswordListProps) => {
   const navigate = useNavigate();
 
@@ -53,21 +55,29 @@ export const PasswordList = ({
     <ScrollArea className="w-full h-full">
       <div className="flex flex-col mr-4">
         {items !== undefined &&
-          items.map((item) => (
-            <Button
-              key={item.id}
-              variant="ghost"
-              className="w-full h-auto justify-start text-left g-2"
-              onClick={() => setItemId(item.id)}
-            >
-              <div>
-                <p>{item.name}</p>
-                <p className="text-gray-500">
-                  {item.username.length !== 0 ? item.username : item.email}
-                </p>
-              </div>
-            </Button>
-          ))}
+          items.map((item) => {
+            return (
+              (itemSearchString === "" ||
+                item.name.includes(itemSearchString) ||
+                item.website.some((website) =>
+                  website.includes(itemSearchString),
+                )) && (
+                <Button
+                  key={item.id}
+                  variant="ghost"
+                  className="w-full h-auto justify-start text-left g-2"
+                  onClick={() => setItemId(item.id)}
+                >
+                  <div>
+                    <p>{item.name}</p>
+                    <p className="text-gray-500">
+                      {item.username.length !== 0 ? item.username : item.email}
+                    </p>
+                  </div>
+                </Button>
+              )
+            );
+          })}
         <ScrollBar orientation="vertical" />
       </div>
     </ScrollArea>

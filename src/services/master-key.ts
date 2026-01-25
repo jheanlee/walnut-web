@@ -8,7 +8,8 @@ interface GetMasterKeyProps {
 }
 export const getMasterKey = async ({ masterPassword }: GetMasterKeyProps) => {
   const encryptedKey = localStorage.getItem(localStorageKeys.masterKey);
-  if (encryptedKey === null) return 404;
+  const username = localStorage.getItem(localStorageKeys.username);
+  if (encryptedKey === null || username === null) return 404;
 
   AuthManager.masterKey = await cryptoWorker
     .run({
@@ -33,10 +34,12 @@ export const getMasterKey = async ({ masterPassword }: GetMasterKeyProps) => {
 interface SetMasterKeyProps {
   masterPassword: string;
   masterKey: string;
+  username: string;
 }
 export const setMasterKey = async ({
   masterPassword,
   masterKey,
+  username,
 }: SetMasterKeyProps) => {
   const encryptedKey = await cryptoWorker.run({
     type: "key-encryption",
@@ -47,6 +50,7 @@ export const setMasterKey = async ({
   });
 
   localStorage.setItem(localStorageKeys.masterKey, encryptedKey);
+  localStorage.setItem(localStorageKeys.username, username);
 
   return 200;
 };
